@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Power Apps Control Naming Tool</title>
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <!-- js-yamlライブラリの読み込み -->
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"
+      integrity="sha512-CSBhVREyzHAjAFfBlIBakwHYSuULfUHwx5sGzOOXZmujE/2Ne11BBYpuGCqlVoKiVXbH8VBkLlqY85iQk3mhiw=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+    
+    <!-- フォールバック用のクリティカルCSS -->
+    <style>
+      /* 最小限のスタイリングルール */
+      .hidden {
+        display: none !important;
+      }
+      
+      .code-area {
+        font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+        height: 400px;
+        white-space: pre;
+        overflow: auto;
+        line-height: 1.5;
+        resize: vertical;
+        tab-size: 4;
+        font-size: 0.9rem;
+      }
+      
+      [data-lang]:not(.hidden) {
+        display: block;
+      }
+      
+      .setting-card {
+        display: block;
+        margin-bottom: 10px;
+      }
+      
+      .tooltip-content {
+        visibility: hidden;
+        position: absolute;
+        bottom: 125%;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: rgba(0, 0, 0, 0.9);
+        color: white;
+        text-align: center;
+        padding: 10px;
+        border-radius: 6px;
+        z-index: 10;
+      }
+      
+      .tooltip-trigger:hover .tooltip-content {
+        visibility: visible;
+        opacity: 1;
+      }
+      
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      
+      .fade-in {
+        animation: fadeIn 0.5s ease-in;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-gray-50 dark:bg-gray-900 min-h-screen transition-colors duration-300"
+  >
+    <!-- アプリ読み込み中の表示 -->
+    <div id="appLoader" class="fixed inset-0 bg-white dark:bg-gray-900 flex items-center justify-center z-50">
+      <div class="text-center">
+        <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+        <p class="mt-4 text-gray-700 dark:text-gray-300 text-xl">アプリケーションを準備しています...</p>
+      </div>
+    </div>
+
+    <header
+      class="bg-gradient-to-r from-blue-600 to-indigo-700 dark:from-blue-800 dark:to-indigo-900 text-white py-6 shadow-lg"
+    >
+      <div
+        class="container mx-auto px-4 flex flex-col md:flex-row justify-between items-center"
+      >
+        <div>
+          <h1 class="text-3xl font-bold" data-lang="en">
+            Power Apps Control Naming Tool
+          </h1>
+          <h1 class="text-3xl font-bold hidden" data-lang="ja">
+            Power Apps コントロール命名ツール
+          </h1>
+          <p class="mt-2" data-lang="en">
+            Fix control naming and properties according to best practices
+          </p>
+          <p class="mt-2 hidden" data-lang="ja">
+            YAMLコードのコントロール名をベストプラクティスに沿って修正し、プロパティをプリセットします
+          </p>
+        </div>
+        <div class="mt-4 md:mt-0 flex items-center">
+          <span class="mr-2 text-sm" data-lang="en">Theme:</span>
+          <span class="mr-2 text-sm hidden" data-lang="ja">テーマ:</span>
+          <button
+            id="themeToggle"
+            class="p-2 rounded-full bg-white bg-opacity-20 hover:bg-opacity-30 transition-colors"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-5 w-5"
+              id="lightIcon"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+              />
+            </svg>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-5 w-5 hidden"
+              id="darkIcon"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+              />
+            </svg>
+          </button>
+          <div class="ml-4 border-l border-white border-opacity-30 pl-4">
+            <span class="mr-2 text-sm" data-lang="en">Language:</span>
+            <span class="mr-2 text-sm hidden" data-lang="ja">言語:</span>
+            <select
+              id="languageSelect"
+              class="bg-white bg-opacity-20 text-white rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-white"
+            >
+              <option value="en">English</option>
+              <option value="ja">日本語</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8" id="mainContent">
+      <div
+        class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-8 transition-colors duration-300"
+      >
+        <h2
+          class="text-xl font-semibold mb-4 text-gray-800 dark:text-white"
+          data-lang="en"
+        >
+          Best Practices for Naming
+        </h2>
+        <h2
+          class="text-xl font-semibold mb-4 text-gray-800 dark:text-white hidden"
+          data-lang="ja"
+        >
+          ベストプラクティスに基づく命名規則
+        </h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <h3
+              class="font-semibold text-lg mb-2 text-gray-700 dark:text-gray-200"
+              data-lang="en"
+            >
+              Control Naming Conventions
+            </h3>
+            <h3
+              class="font-semibold text-lg mb-2 text-gray-700 dark:text-gray-200 hidden"
+              data-lang="ja"
+            >
+              コントロール命名規則
+            </h3>
+
+            <ul
+              class="list-disc pl-5 space-y-2 text-gray-600 dark:text-gray-300"
+            >
+              <li data-lang="en">Use camelCase for control names</li>
+              <li data-lang="ja" class="hidden">
+                コントロール名にはキャメルケース形式を使用します
+              </li>
+
+              <li data-lang="en">
+                Start with a 3-letter type descriptor followed by purpose (e.g.
+                <span class="font-mono text-blue-600 dark:text-blue-400"
+                  >lblUserName</span
+                >)
+              </li>
+              <li data-lang="ja" class="hidden">
+                3文字のタイプ記述子で始め、その後に目的を記述します (例:
+                <span class="font-mono text-blue-600 dark:text-blue-400"
+                  >lblUserName</span
+                >)
+              </li>
+
+              <li
+                class="text-red-600 dark:text-red-400 font-semibold"
+                data-lang="en"
+              >
+                Control names must be unique across the application
+              </li>
+              <li
+                class="text-red-600 dark:text-red-400 font-semibold hidden"
+                data-lang="ja"
+              >
+                コントロール名はアプリケーション全体で一意にする必要があります
+              </li>
+
+              <li data-lang="en">
+                Add screen name abbreviation for uniqueness (e.g.
+                <span class="font-mono text-blue-600 dark:text-blue-400"
+                  >lblTitleHS</span
+                >
+                - label in Home Screen)
+              </li>
+              <li data-lang="ja" class="hidden">
+                一意性を確保するため、必要に応じて画面名の略語を付加します (例:
+                <span class="font-mono text-blue-600 dark:text-blue-400"
+                  >lblTitleHS</span
+                >
+                - Home Screenのラベル)
+              </li>
+
+              <li data-lang="en">Avoid non-ASCII characters</li>
+              <li data-lang="ja" class="hidden">
+                日本語やその他の非ASCII文字は使用しません
+              </li>
+            </ul>
+
+            <div class="mt-4">
+              <h4
+                class="font-medium text-gray-700 dark:text-gray-200"
+                data-lang="en"
+              >
+                Common control abbreviations:
+              </h4>
+              <h4
+                class="font-medium text-gray-700 dark:text-gray-200 hidden"
+                data-lang="ja"
+              >
+                一般的なコントロールの略語:
+              </h4>
+
+              <div
+                class="grid grid-cols-2 gap-2 mt-1 text-sm text-gray-600 dark:text-gray-300"
+              >
+                <div data-lang="en">
+                  Label: <span class="font-mono">lbl</span>
+                </div>
+                <div data-lang="ja" class="hidden">
+                  ラベル: <span class="font-mono">lbl</span>
+                </div>
+
+                <div data-lang="en">
+                  Button: <span class="font-mono">btn</span>
+                </div>
+                <div data-lang="ja" class="hidden">
+                  ボタン: <span class="font-mono">btn</span>
+                </div>
+
+                <div data-lang="en">
+                  Text input: <span class="font-mono">txt</span>
+                </div>
+                <div data-lang="ja" class="hidden">
+                  テキスト入力: <span class="font-mono">txt</span>
+                </div>
+
+                <div data-lang="en">
+                  Gallery: <span class="font-mono">gal</span>
+                </div>
+                <div data-lang="ja" class="hidden">
+                  ギャラリー: <span class="font-mono">gal</span>
+                </div>
+
+                <div data-lang="en">
+                  Form: <span class="font-mono">frm</span>
+                </div>
+                <div data-lang="ja" class="hidden">
+                  フォーム: <span class="font-mono">frm</span>
+                </div>
+
+                <div data-lang="en">
+                  ComboBox: <span class="font-mono">cmb</span>
+                </div>
+                <div data-lang="ja" class="hidden">
+                  コンボボックス: <span class="font-mono">cmb</span>
+                </div>
+
+                <div data-lang="en">
+                  CheckBox: <span class="font-mono">chk</span>
+                </div>
+                <div data-lang="ja" class="hidden">
+                  チェックボックス: <span class="font-mono">chk</span>
+                </div>
+
+                <div data-lang="en">
+                  Container: <span class="font-mono">con</span>
+                </div>
+                <div data-lang="ja" class="hidden">
+                  コンテナ: <span class="font-mono">con</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h3
+              class="font-semibold text-lg mb-2 text-gray-700 dark:text-gray-200"
+              data-lang="en"
+            >
+              Screens and Data Sources
+            </h3>
+            <h3
+              class="font-semibold text-lg mb-2 text-gray-700 dark:text-gray-200 hidden"
+              data-lang="ja"
+            >
+              画面とデータソース
+            </h3>
+
+            <ul
+              class="list-disc pl-5 space-y-2 text-gray-600 dark:text-gray-300"
+            >
+              <li data-lang="en">
+                Use clear screen names ending with "Screen" (e.g.
+                <span class="font-mono text-blue-600 dark:text-blue-400"
+                  >Home_Screen</span
+                >)
+              </li>
+              <li data-lang="ja" class="hidden">
+                画面名はわかりやすい言葉を使い、末尾に「Screen」を付けます (例:
+                <span class="font-mono text-blue-600 dark:text-blue-400"
+                  >Home_Screen</span
+                >)
+              </li>
+
+              <li data-lang="en">
+                Use PascalCase for data sources (e.g.
+                <span class="font-mono text-blue-600 dark:text-blue-400"
+                  >EmployeeList</span
+                >)
+              </li>
+              <li data-lang="ja" class="hidden">
+                データソースにはパスカルケース形式を使用します (例:
+                <span class="font-mono text-blue-600 dark:text-blue-400"
+                  >EmployeeList</span
+                >)
+              </li>
+            </ul>
+
+            <h3
+              class="font-semibold text-lg mt-4 mb-2 text-gray-700 dark:text-gray-200"
+              data-lang="en"
+            >
+              Card Control Enhancement
+            </h3>
+            <h3
+              class="font-semibold text-lg mt-4 mb-2 text-gray-700 dark:text-gray-200 hidden"
+              data-lang="ja"
+            >
+              カードコントロール強化
+            </h3>
+
+            <ul
+              class="list-disc pl-5 space-y-2 text-gray-600 dark:text-gray-300"
+            >
+              <li data-lang="en">
+                Automatically enhances card controls with proper properties
+              </li>
+              <li data-lang="ja" class="hidden">
+                カードコントロールに適切なプロパティを自動的に追加
+              </li>
+
+              <li data-lang="en">
+                Adds hint text, tooltips and validation based on field context
+              </li>
+              <li data-lang="ja" class="hidden">
+                フィールドの文脈に基づいてヒントテキスト、ツールチップ、バリデーションを追加
+              </li>
+
+              <li data-lang="en">
+                Ensures consistent parent-child property inheritance
+              </li>
+              <li data-lang="ja" class="hidden">
+                親子間のプロパティの継承を一貫性を持って設定
+              </li>
+            </ul>
+
+            <div
+              class="bg-amber-50 dark:bg-amber-900 border-l-4 border-amber-400 dark:border-amber-500 p-4 mt-4"
+            >
+              <p
+                class="font-medium text-amber-800 dark:text-amber-200"
+                data-lang="en"
+              >
+                Parent DataField Reference
+              </p>
+              <p
+                class="font-medium text-amber-800 dark:text-amber-200 hidden"
+                data-lang="ja"
+              >
+                親DataField参照機能
+              </p>
+
+              <p
+                class="text-sm text-amber-700 dark:text-amber-300"
+                data-lang="en"
+              >
+                This tool automatically uses parent card's DataField value to name child controls consistently.
+              </p>
+              <p
+                class="text-sm text-amber-700 dark:text-amber-300 hidden"
+                data-lang="ja"
+              >
+                親カードのDataField値を使用して、子コントロールの名前を一貫性を持って命名します。
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <!-- DisplayMode Setting -->
+        <div
+          class="setting-card bg-white dark:bg-gray-800 rounded-lg shadow p-4 cursor-pointer transition-all duration-300 hover:shadow-md"
+          id="settingDisplayMode"
+        >
+          <h3
+            class="text-lg font-semibold text-gray-800 dark:text-white"
+            data-lang="en"
+          >
+            DisplayMode Setting
+          </h3>
+          <h3
+            class="text-lg font-semibold text-gray-800 dark:text-white hidden"
+            data-lang="ja"
+          >
+            DisplayMode設定
+          </h3>
+
+          <div class="mt-2">
+            <label class="inline-flex items-center">
+              <input
+                type="checkbox"
+                class="form-checkbox text-blue-600"
+                id="enableDisplayMode"
+                checked
+              />
+              <span class="ml-2 text-gray-700 dark:text-gray-300" data-lang="en"
+                >Set DisplayMode automatically</span
+              >
+              <span
+                class="ml-2 text-gray-700 dark:text-gray-300 hidden"
+                data-lang="ja"
+                >DisplayModeを自動設定する</span
+              >
+            </label>
+          </div>
+
+          <p
+            class="text-sm text-gray-600 dark:text-gray-400 mt-2"
+            data-lang="en"
+          >
+            Sets appropriate display mode for controls
+          </p>
+          <p
+            class="text-sm text-gray-600 dark:text-gray-400 mt-2 hidden"
+            data-lang="ja"
+          >
+            コントロールの表示モードを適切に設定します
+          </p>
+        </div>
+
+        <!-- ContentLanguage Setting -->
+        <div
+          class="setting-card bg-white dark:bg-gray-800 rounded-lg shadow p-4 cursor-pointer transition-all duration-300 hover:shadow-md"
+          id="settingContentLanguage"
+        >
+          <h3
+            class="text-lg font-semibold text-gray-800 dark:text-white"
+            data-lang="en"
+          >
+            ContentLanguage Setting
+          </h3>
+          <h3
+            class="text-lg font-semibold text-gray-800 dark:text-white hidden"
+            data-lang="ja"
+          >
+            ContentLanguage設定
+          </h3>
+
+          <div class="mt-2">
+            <label class="inline-flex items-center">
+              <input
+                type="checkbox"
+                class="form-checkbox text-blue-600"
+                id="enableContentLanguage"
+                checked
+              />
+              <span class="ml-2 text-gray-700 dark:text-gray-300" data-lang="en"
+                >Set ContentLanguage automatically</span
+              >
+              <span
+                class="ml-2 text-gray-700 dark:text-gray-300 hidden"
+                data-lang="ja"
+                >ContentLanguageを自動設定する</span
+              >
+            </label>
+          </div>
+
+          <div class="mt-2">
+            <select
+              id="contentLanguageValue"
+              class="form-select block w-full mt-1 border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+            >
+              <option value="en">English (en)</option>
+              <option value="ja">日本語 (ja)</option>
+              <option value="zh-Hans">中文简体 (zh-Hans)</option>
+              <option value="zh-Hant">中文繁體 (zh-Hant)</option>
+              <option value="ko">한국어 (ko)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Parent.DisplayName Setting -->
+        <div
+          class="setting-card bg-white dark:bg-gray-800 rounded-lg shadow p-4 cursor-pointer transition-all duration-300 hover:shadow-md"
+          id="settingParentDisplay"
+        >
+          <h3
+            class="text-lg font-semibold text-gray-800 dark:text-white"
+            data-lang="en"
+          >
+            Parent.DisplayName Setting
+          </h3>
+          <h3
+            class="text-lg font-semibold text-gray-800 dark:text-white hidden"
+            data-lang="ja"
+          >
+            Parent.DisplayName設定
+          </h3>
+
+          <div class="mt-2">
+            <label class="inline-flex items-center">
+              <input
+                type="checkbox"
+                class="form-checkbox text-blue-600"
+                id="enableParentDisplay"
+                checked
+              />
+              <span class="ml-2 text-gray-700 dark:text-gray-300" data-lang="en"
+                >Reference Parent.DisplayName</span
+              >
+              <span
+                class="ml-2 text-gray-700 dark:text-gray-300 hidden"
+                data-lang="ja"
+                >Parent.DisplayNameを参照する</span
+              >
+            </label>
+          </div>
+        </div>
+
+        <!-- Enhanced Card Properties Setting -->
+        <div
+          class="setting-card bg-white dark:bg-gray-800 rounded-lg shadow p-4 cursor-pointer transition-all duration-300 hover:shadow-md bg-purple-50 dark:bg-purple-900"
+          id="settingEnhancedCardProps"
+        >
+          <h3
+            class="text-lg font-semibold text-purple-800 dark:text-purple-200"
+            data-lang="en"
+          >
+            Card Control Enhancement
+          </h3>
+          <h3
+            class="text-lg font-semibold text-purple-800 dark:text-purple-200 hidden"
+            data-lang="ja"
+          >
+            カードコントロール強化
+          </h3>
+
+          <div class="mt-2">
+            <label class="inline-flex items-center">
+              <input
+                type="checkbox"
+                class="form-checkbox text-purple-600"
+                id="enableCardEnhancement"
+                checked
+              />
+              <span
+                class="ml-2 font-medium text-purple-700 dark:text-purple-300"
+                data-lang="en"
+                >Enhance card controls</span
+              >
+              <span
+                class="ml-2 font-medium text-purple-700 dark:text-purple-300 hidden"
+                data-lang="ja"
+                >カードコントロールを強化する</span
+              >
+            </label>
+          </div>
+        </div>
+
+        <!-- Reference Auto-Update Setting -->
+        <div
+          class="setting-card bg-white dark:bg-gray-800 rounded-lg shadow p-4 cursor-pointer transition-all duration-300 hover:shadow-md bg-blue-50 dark:bg-blue-900 col-span-1 md:col-span-2"
+          id="settingReferenceUpdate"
+        >
+          <h3
+            class="text-lg font-semibold text-blue-800 dark:text-blue-200"
+            data-lang="en"
+          >
+            Automatic Reference Updates
+          </h3>
+          <h3
+            class="text-lg font-semibold text-blue-800 dark:text-blue-200 hidden"
+            data-lang="ja"
+          >
+            参照の自動更新
+          </h3>
+
+          <div class="mt-2">
+            <label class="inline-flex items-center">
+              <input
+                type="checkbox"
+                class="form-checkbox text-blue-600"
+                id="enableReferenceUpdate"
+                checked
+              />
+              <span
+                class="ml-2 font-medium text-blue-700 dark:text-blue-300"
+                data-lang="en"
+                >Update references automatically</span
+              >
+              <span
+                class="ml-2 font-medium text-blue-700 dark:text-blue-300 hidden"
+                data-lang="ja"
+                >参照を自動的に更新する</span
+              >
+            </label>
+          </div>
+        </div>
+
+        <!-- DataSource Setting -->
+        <div
+          class="setting-card bg-white dark:bg-gray-800 rounded-lg shadow p-4 cursor-pointer transition-all duration-300 hover:shadow-md col-span-1 md:col-span-2"
+          id="settingDataSource"
+        >
+          <h3
+            class="text-lg font-semibold text-gray-800 dark:text-white"
+            data-lang="en"
+          >
+            DataSource Settings
+          </h3>
+          <h3
+            class="text-lg font-semibold text-gray-800 dark:text-white hidden"
+            data-lang="ja"
+          >
+            データソース設定
+          </h3>
+
+          <div class="mt-2">
+            <label class="inline-flex items-center">
+              <input
+                type="checkbox"
+                class="form-checkbox text-blue-600"
+                id="enableDataSourceFix"
+                checked
+              />
+              <span class="ml-2 text-gray-700 dark:text-gray-300" data-lang="en"
+                >Standardize DataSource references</span
+              >
+              <span
+                class="ml-2 text-gray-700 dark:text-gray-300 hidden"
+                data-lang="ja"
+                >データソース参照を標準化する</span
+              >
+            </label>
+          </div>
+
+          <div class="mt-2">
+            <input
+              type="text"
+              class="form-input block w-full mt-1 border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+              id="dataSourceName"
+              placeholder="Employee_Info"
+              value="Employee_Info"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Original YAML Input -->
+        <div
+          class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 transition-colors duration-300"
+        >
+          <h2
+            class="text-xl font-semibold mb-4 text-gray-800 dark:text-white"
+            data-lang="en"
+          >
+            Original YAML Code
+          </h2>
+          <h2
+            class="text-xl font-semibold mb-4 text-gray-800 dark:text-white hidden"
+            data-lang="ja"
+          >
+            元のYAMLコード
+          </h2>
+
+          <div class="flex justify-end mb-2">
+            <button
+              id="clearBtn"
+              class="bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 px-3 py-1 rounded mr-2 transition-colors"
+            >
+              <span data-lang="en">Clear</span>
+              <span data-lang="ja" class="hidden">クリア</span>
+            </button>
+            <button
+              id="loadSampleBtn"
+              class="bg-blue-100 hover:bg-blue-200 dark:bg-blue-800 dark:hover:bg-blue-700 text-blue-800 dark:text-blue-200 px-3 py-1 rounded transition-colors"
+            >
+              <span data-lang="en">Load Sample</span>
+              <span data-lang="ja" class="hidden">サンプル読込</span>
+            </button>
+            <button
+              id="testDataFieldBtn"
+              class="bg-purple-100 hover:bg-purple-200 dark:bg-purple-800 dark:hover:bg-purple-700 text-purple-800 dark:text-purple-200 px-3 py-1 rounded transition-colors ml-2"
+            >
+              <span data-lang="en">Test Parent DataField</span>
+              <span data-lang="ja" class="hidden">親DataFieldテスト</span>
+            </button>
+          </div>
+
+          <textarea
+            id="inputYaml"
+            class="w-full code-area p-4 border rounded dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 transition-colors"
+            data-placeholder-en="Paste your Power Apps YAML code here..."
+            data-placeholder-ja="Power AppsのYAMLコードを貼り付けてください..."
+          ></textarea>
+        </div>
+
+        <!-- Modified YAML Output -->
+        <div
+          class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 transition-colors duration-300"
+        >
+          <h2
+            class="text-xl font-semibold mb-4 text-gray-800 dark:text-white"
+            data-lang="en"
+          >
+            Modified YAML Code
+          </h2>
+          <h2
+            class="text-xl font-semibold mb-4 text-gray-800 dark:text-white hidden"
+            data-lang="ja"
+          >
+            修正されたYAMLコード
+          </h2>
+
+          <div class="flex justify-end mb-2">
+            <button
+              id="copyBtn"
+              class="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white px-3 py-1 rounded transition-colors"
+            >
+              <span data-lang="en">Copy</span>
+              <span data-lang="ja" class="hidden">コピー</span>
+            </button>
+          </div>
+
+          <pre
+            id="outputYaml"
+            class="w-full code-area p-4 border rounded dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 transition-colors overflow-auto"
+          ></pre>
+        </div>
+      </div>
+
+      <!-- Convert Button -->
+      <div class="flex justify-center mt-6">
+        <button
+          id="convertBtn"
+          class="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold text-lg shadow-md transform transition-all hover:scale-105 active:scale-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+        >
+          <span data-lang="en">Fix Control Names and Properties</span>
+          <span data-lang="ja" class="hidden"
+            >コントロール名とプロパティを修正する</span
+          >
+        </button>
+      </div>
+
+      <!-- Change Log -->
+      <div
+        id="changelogContainer"
+        class="mt-8 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 hidden transition-colors duration-300"
+      >
+        <h2
+          class="text-xl font-semibold mb-4 text-gray-800 dark:text-white"
+          data-lang="en"
+        >
+          Change Log
+        </h2>
+        <h2
+          class="text-xl font-semibold mb-4 text-gray-800 dark:text-white hidden"
+          data-lang="ja"
+        >
+          変更ログ
+        </h2>
+
+        <div class="overflow-x-auto">
+          <table
+            class="min-w-full bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200"
+          >
+            <thead>
+              <tr>
+                <th
+                  class="py-2 px-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider"
+                  data-lang="en"
+                >
+                  Original Name
+                </th>
+                <th
+                  class="py-2 px-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider hidden"
+                  data-lang="ja"
+                >
+                  元の名前
+                </th>
+
+                <th
+                  class="py-2 px-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider"
+                  data-lang="en"
+                >
+                  New Name
+                </th>
+                <th
+                  class="py-2 px-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider hidden"
+                  data-lang="ja"
+                >
+                  修正後の名前
+                </th>
+
+                <th
+                  class="py-2 px-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider"
+                  data-lang="en"
+                >
+                  Control Type
+                </th>
+                <th
+                  class="py-2 px-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider hidden"
+                  data-lang="ja"
+                >
+                  コントロールタイプ
+                </th>
+
+                <th
+                  class="py-2 px-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider"
+                  data-lang="en"
+                >
+                  Parent DataField
+                </th>
+                <th
+                  class="py-2 px-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider hidden"
+                  data-lang="ja"
+                >
+                  親DataField
+                </th>
+
+                <th
+                  class="py-2 px-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider"
+                  data-lang="en"
+                >
+                  References Updated
+                </th>
+                <th
+                  class="py-2 px-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider hidden"
+                  data-lang="ja"
+                >
+                  参照更新箇所
+                </th>
+              </tr>
+            </thead>
+            <tbody id="changelogBody">
+              <!-- JavaScriptで動的に追加されます -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+
+    <footer
+      class="bg-gray-800 dark:bg-gray-900 text-white py-6 mt-8 transition-colors duration-300"
+    >
+      <div class="container mx-auto px-4 text-center">
+        <p data-lang="en">
+          © 2025 Power Apps Control Naming Tool - Hosted on GitHub Pages
+        </p>
+        <p data-lang="ja" class="hidden">
+          © 2025 Power Apps コントロール命名ツール - GitHub Pagesでホスティング
+        </p>
+
+        <p class="text-gray-400 text-sm mt-2" data-lang="en">
+          Based on naming conventions from
+          <a
+            href="https://learn.microsoft.com/en-us/power-apps/guidance/coding-guidelines/code-readability"
+            class="text-blue-300 hover:underline"
+            target="_blank"
+            >Microsoft's Official Documentation</a
+          >
+        </p>
+        <p class="text-gray-400 text-sm mt-2 hidden" data-lang="ja">
+          基本命名規則は
+          <a
+            href="https://learn.microsoft.com/ja-jp/power-apps/guidance/coding-guidelines/code-readability"
+            class="text-blue-300 hover:underline"
+            target="_blank"
+            >Microsoft公式ドキュメント</a
+          >
+          に準拠しています
+        </p>
+      </div>
+    </footer>
+
+    <!-- エラー状態表示用のスネークバー要素 -->
+    <div 
+      id="errorSnackbar" 
+      class="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-6 py-3 rounded-lg shadow-lg hidden z-50"
+    >
+      エラーが発生しました
+    </div>
+
+    <!-- ローディングオーバーレイ -->
+    <div 
+      id="loadingOverlay" 
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden"
+    >
+      <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl text-center">
+        <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+        <p class="mt-4 text-gray-700 dark:text-gray-300" data-lang="en">Processing...</p>
+        <p class="mt-4 text-gray-700 dark:text-gray-300 hidden" data-lang="ja">処理中...</p>
+      </div>
+    </div>
+
+    <!-- フォールバックUI (エラー時表示) -->
+    <div id="fallbackUI" class="fixed inset-0 bg-white dark:bg-gray-900 p-6 z-50 hidden">
+      <h2 class="text-2xl font-bold mb-4 text-gray-800 dark:text-white">Power Apps Control Naming Tool (フォールバックモード)</h2>
+      <p class="mb-4 text-red-600 dark:text-red-400">エラーが発生したため、シンプルモードで表示しています。</p>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label class="block mb-2 font-semibold">YAML入力:</label>
+          <textarea id="fallbackInput" class="w-full h-64 p-4 border rounded"></textarea>
+        </div>
+        <div>
+          <label class="block mb-2 font-semibold">変換結果:</label>
+          <textarea id="fallbackOutput" class="w-full h-64 p-4 border rounded bg-gray-50 dark:bg-gray-800" readonly></textarea>
+        </div>
+      </div>
+      
+      <div class="mt-4 text-center">
+        <button id="fallbackConvertBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded">変換</button>
+        <button id="fallbackCopyBtn" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded ml-4">コピー</button>
+        <button id="fallbackReloadBtn" class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded ml-4">ページ再読込</button>
+      </div>
+    </div>
+
+    <!-- デバッグモード -->
+    <div id="debugPanel" class="fixed bottom-0 right-0 bg-black bg-opacity-90 text-green-400 p-4 w-96 h-64 overflow-auto text-xs font-mono hidden z-50">
+      <div class="flex justify-between items-center mb-2">
+        <h3 class="text-white">Debug Console</h3>
+        <button id="closeDebugBtn" class="text-white">&times;</button>
+      </div>
+      <div id="debugOutput"></div>
+    </div>
+
+    <!-- JS読み込み -->
+    <!-- 設定と定数 -->
+    <script src="js/config.js"></script>
+    <!-- ユーティリティ関数 -->
+    <script src="js/utils.js"></script>
+    <!-- YAMLプロセッサ -->
+    <script src="js/yaml-processor.js"></script>
+    <!-- UIコントローラー -->
+    <script src="js/ui-controller.js"></script>
+    <!-- アプリ初期化 -->
+    <script src="js/app.js"></script>
+    <!-- デバッグツール -->
+    <script src="js/debug-tools.js"></script>
+  </body>
+</html>

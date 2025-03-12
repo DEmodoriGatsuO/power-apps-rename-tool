@@ -1,0 +1,387 @@
+/* 
+ * Power Apps Control Naming Tool - Main Stylesheet
+ * このファイルにはアプリケーションのすべてのスタイルが含まれています
+ */
+
+/* ルート変数で一貫したテーマを実現 */
+:root {
+    --transition-speed: 300ms;
+    --primary-blue: #3b82f6;
+    --primary-indigo: #4f46e5;
+    --primary-purple: #8b5cf6;
+    --success-green: #22c55e;
+    --warning-yellow: #f59e0b;
+    --danger-red: #ef4444;
+    --light-bg: #f9fafb;
+    --dark-bg: #111827;
+    --light-card: #ffffff;
+    --dark-card: #1f2937;
+    --light-text: #1f2937;
+    --dark-text: #f9fafb;
+    --light-border: #e5e7eb;
+    --dark-border: #374151;
+}
+
+/* 全体スタイリング */
+body {
+    transition: background-color var(--transition-speed) ease;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, 
+                 "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.5;
+}
+
+/* コードエリアのスタイリング */
+.code-area {
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    height: 400px;
+    white-space: pre;
+    overflow: auto;
+    line-height: 1.5;
+    resize: vertical;
+    transition: background-color var(--transition-speed) ease, 
+                color var(--transition-speed) ease,
+                border-color var(--transition-speed) ease;
+    tab-size: 4;
+    font-size: 0.9rem;
+}
+
+/* 設定カード */
+.setting-card {
+    transition: all var(--transition-speed) ease;
+    border-radius: 0.5rem;
+}
+
+.setting-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 
+                0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* フォームコントロールのスタイリング */
+input[type="checkbox"] {
+    cursor: pointer;
+    width: 1rem;
+    height: 1rem;
+}
+
+input[type="text"], 
+select {
+    border-radius: 0.375rem;
+    padding: 0.5rem;
+    width: 100%;
+    transition: all var(--transition-speed) ease;
+}
+
+input[type="text"]:focus, 
+select:focus,
+textarea:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+    border-color: var(--primary-blue);
+}
+
+/* ボタンのスタイリング */
+button {
+    border-radius: 0.375rem;
+    font-weight: 500;
+    transition: all var(--transition-speed) ease;
+}
+
+button:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+}
+
+/* 変換ボタンのアニメーション */
+#convertBtn {
+    transition: all 0.3s ease, transform 0.15s ease;
+}
+
+#convertBtn:hover {
+    transform: translateY(-2px);
+}
+
+#convertBtn:active {
+    transform: translateY(0);
+}
+
+/* 参照更新用ツールチップのスタイリング */
+.tooltip-trigger {
+    position: relative;
+    display: inline-block;
+}
+
+.tooltip-content {
+    visibility: hidden;
+    position: absolute;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.9);
+    color: white;
+    text-align: center;
+    padding: 10px;
+    border-radius: 6px;
+    z-index: 10;
+    opacity: 0;
+    transition: opacity 0.3s, visibility 0.3s;
+    width: 200px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    font-size: 0.75rem;
+}
+
+.tooltip-content::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: rgba(0, 0, 0, 0.9) transparent transparent transparent;
+}
+
+.tooltip-trigger:hover .tooltip-content {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* ダークモード調整 */
+.dark .code-area {
+    scrollbar-color: rgb(86, 88, 105) rgba(86, 88, 105, 0.2);
+}
+
+.dark .code-area::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.dark .code-area::-webkit-scrollbar-track {
+    background: rgba(86, 88, 105, 0.2);
+    border-radius: 5px;
+}
+
+.dark .code-area::-webkit-scrollbar-thumb {
+    background: rgb(86, 88, 105);
+    border-radius: 5px;
+}
+
+/* ハイライト表示要素 */
+.highlight {
+    background-color: rgba(255, 255, 0, 0.3);
+}
+
+.dark .highlight {
+    background-color: rgba(255, 255, 0, 0.15);
+}
+
+/* アニメーション */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.6; }
+    100% { opacity: 1; }
+}
+
+.pulse {
+    animation: pulse 1.5s infinite ease-in-out;
+}
+
+/* 言語切り替えヘルパースタイル */
+[data-lang]:not(.hidden) {
+    display: block;
+}
+
+[data-lang].hidden {
+    display: none !important;
+}
+
+/* ダークモード切り替えボタンスタイル */
+#themeToggle {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* テーブルスタイル */
+table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+th {
+    text-transform: uppercase;
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-align: left;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--light-border);
+}
+
+.dark th {
+    border-bottom-color: var(--dark-border);
+}
+
+td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--light-border);
+    vertical-align: top;
+}
+
+.dark td {
+    border-bottom-color: var(--dark-border);
+}
+
+tr:hover td {
+    background-color: rgba(243, 244, 246, 0.5);
+}
+
+.dark tr:hover td {
+    background-color: rgba(55, 65, 81, 0.5);
+}
+
+/* カードプロパティハイライト */
+.property-added {
+    color: var(--success-green);
+    font-weight: 500;
+}
+
+.property-modified {
+    color: var(--warning-yellow);
+    font-weight: 500;
+}
+
+/* フッタースタイリング */
+footer a {
+    color: #93c5fd;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+footer a:hover {
+    color: #60a5fa;
+    text-decoration: underline;
+}
+
+/* レスポンシブ調整 */
+@media (max-width: 768px) {
+    .code-area {
+        height: 300px;
+    }
+    
+    .tooltip-content {
+        width: 150px;
+    }
+    
+    th, td {
+        padding: 0.5rem;
+    }
+    
+    .container {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+}
+
+@media (max-width: 640px) {
+    /* モバイル向けの小さなコントロール */
+    .setting-card {
+        padding: 0.75rem;
+    }
+    
+    #convertBtn {
+        width: 100%;
+    }
+}
+
+/* 印刷スタイル */
+@media print {
+    body {
+        background-color: white !important;
+        color: black !important;
+    }
+    
+    .no-print {
+        display: none !important;
+    }
+    
+    .code-area {
+        height: auto !important;
+        overflow: visible !important;
+        border: 1px solid #ccc !important;
+    }
+    
+    #changelogContainer {
+        display: block !important;
+    }
+    
+    @page {
+        margin: 2cm;
+    }
+}
+
+/* エラー時の表示 */
+#errorSnackbar {
+    animation: fadeIn 0.3s ease-in;
+}
+
+/* ローディングオーバーレイスタイル */
+#loadingOverlay {
+    transition: opacity 0.3s ease;
+}
+
+/* 親DataField表示特別スタイル */
+.parent-datafield {
+    color: var(--primary-purple);
+    font-weight: 500;
+}
+
+/* デバッグパネルスタイル */
+#debugPanel {
+    transition: transform 0.3s ease;
+    transform-origin: bottom right;
+}
+
+#debugOutput {
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 11px;
+    overflow-y: auto;
+    max-height: calc(100% - 24px);
+}
+
+#debugOutput .log {
+    margin-bottom: 4px;
+    border-left: 3px solid #444;
+    padding-left: 6px;
+}
+
+#debugOutput .error {
+    color: #ff6b6b;
+    border-left-color: #ff6b6b;
+}
+
+#debugOutput .warn {
+    color: #feca57;
+    border-left-color: #feca57;
+}
+
+#debugOutput .info {
+    color: #1dd1a1;
+    border-left-color: #1dd1a1;
+}
+
+/* アプリローダー */
+#appLoader {
+    transition: opacity 0.5s ease;
+}
