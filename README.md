@@ -63,7 +63,7 @@ The tool uses these standard 3-letter prefixes:
 
 ### Method 1: GitHub Pages
 
-Access the tool directly at [URL to be added after deployment]
+Access the tool directly at [Tool](https://demodorigatsuo.github.io/power-apps-rename-tool/)
 
 ### Method 2: Local Installation
 
@@ -180,7 +180,7 @@ Power Apps コントロール命名ツールは、Microsoft Power Appsのベス�
 
 ### 方法1: GitHub Pages
 
-以下のURLからツールに直接アクセスできます：[デプロイ後にURLを追加]
+以下のURLからツールに直接アクセスできます：[Tool](https://demodorigatsuo.github.io/power-apps-rename-tool/)
 
 ### 方法2: ローカルインストール
 
