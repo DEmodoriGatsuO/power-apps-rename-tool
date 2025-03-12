@@ -9,13 +9,8 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="styles.css" />
-    <!-- js-yamlライブラリの読み込み -->
-    <script
-      src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"
-      integrity="sha512-CSBhVREyzHAjAFfBlIBakwHYSuULfUHwx5sGzOOXZmujE/2Ne11BBYpuGCqlVoKiVXbH8VBkLlqY85iQk3mhiw=="
-      crossorigin="anonymous"
-      referrerpolicy="no-referrer"
-    ></script>
+    <!-- ローカルjs-yamlライブラリの読み込み -->
+    <script src="js/js-yaml.min.js"></script>
     
     <!-- フォールバック用のクリティカルCSS -->
     <style>
@@ -529,8 +524,8 @@
               id="contentLanguageValue"
               class="form-select block w-full mt-1 border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
             >
-              <option value="en">English (en)</option>
-              <option value="ja">日本語 (ja)</option>
+              <option value="en">English (en-us)</option>
+              <option value="ja">日本語 (ja-jp)</option>
               <option value="zh-Hans">中文简体 (zh-Hans)</option>
               <option value="zh-Hant">中文繁體 (zh-Hant)</option>
               <option value="ko">한국어 (ko)</option>
@@ -985,7 +980,7 @@
       <div id="debugOutput"></div>
     </div>
 
-    <!-- JS読み込み -->
+    <!-- JS読み込み (ローカルYAMLライブラリ対応) -->
     <!-- 設定と定数 -->
     <script src="js/config.js"></script>
     <!-- ユーティリティ関数 -->

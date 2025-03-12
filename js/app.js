@@ -16,53 +16,26 @@
      * 必須リソースが読み込まれているか確認
      */
     function checkRequiredResources() {
+        console.log("必須リソースのチェック中...");
+        
         // YAML ライブラリが読み込まれているか確認
         if (typeof jsyaml === 'undefined') {
+            console.error('YAMLライブラリ (js-yaml) が見つかりません');
             app.errors.push('YAMLライブラリ (js-yaml) の読み込みに失敗しました。');
             app.yamlLibAvailable = false;
             return false;
         } else {
+            console.log('YAMLライブラリ (js-yaml) が正常に読み込まれました');
             app.yamlLibAvailable = true;
         }
         
         // スタイルシートが適用されているか確認
         const styleSheets = Array.from(document.styleSheets);
         if (styleSheets.length === 0) {
-            Utils.logWarn('スタイルシートが読み込まれていない可能性があります。');
+            console.warn('スタイルシートが読み込まれていない可能性があります。');
         }
         
         return true;
-    }
-    
-    /**
-     * YAMLライブラリが利用できない場合のフォールバック
-     */
-    function loadYamlLibrary() {
-        return new Promise((resolve, reject) => {
-            try {
-                const script = document.createElement('script');
-                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js';
-                script.integrity = 'sha512-CSBhVREyzHAjAFfBlIBakwHYSuULfUHwx5sGzOOXZmujE/2Ne11BBYpuGCqlVoKiVXbH8VBkLlqY85iQk3mhiw==';
-                script.crossOrigin = 'anonymous';
-                script.referrerPolicy = 'no-referrer';
-                
-                script.onload = function() {
-                    Utils.logDebug('YAMLライブラリを動的に読み込みました');
-                    app.yamlLibAvailable = true;
-                    resolve(true);
-                };
-                
-                script.onerror = function(e) {
-                    Utils.logError('YAMLライブラリの動的読み込みに失敗しました:', e);
-                    reject(new Error('YAMLライブラリの読み込みに失敗しました'));
-                };
-                
-                document.body.appendChild(script);
-            } catch (e) {
-                Utils.logError('動的スクリプト読み込み中にエラーが発生しました:', e);
-                reject(e);
-            }
-        });
     }
     
     /**
@@ -96,11 +69,19 @@
     function setupErrorHandlers() {
         // 未キャッチエラー
         window.addEventListener('error', function(event) {
-            Utils.logError('グローバルエラー:', event.message, 'at', event.filename, 'line', event.lineno);
+            console.error('グローバルエラー:', event.message, 'at', event.filename, 'line', event.lineno);
             
             // 深刻なエラーの場合はユーザーに通知
             if (event.error && (event.error.name === 'ReferenceError' || event.error.name === 'TypeError')) {
-                Utils.showError('アプリケーションエラー: ' + event.message);
+                // スネークバーでエラーを表示
+                const errorSnackbar = document.getElementById('errorSnackbar');
+                if (errorSnackbar) {
+                    errorSnackbar.textContent = 'アプリケーションエラー: ' + event.message;
+                    errorSnackbar.classList.remove('hidden');
+                    setTimeout(() => {
+                        errorSnackbar.classList.add('hidden');
+                    }, 5000);
+                }
             }
             
             // AppLoaderが表示されたままになるのを防ぐ
@@ -112,7 +93,7 @@
         
         // 未処理のPromiseエラー
         window.addEventListener('unhandledrejection', function(event) {
-            Utils.logError('未処理のPromiseエラー:', event.reason);
+            console.error('未処理のPromiseエラー:', event.reason);
         });
     }
     
@@ -123,22 +104,52 @@
         if (app.errors.length === 0) return;
         
         const errorMessage = app.errors.join(' ');
-        Utils.logError('初期化エラー:', errorMessage);
+        console.error('初期化エラー:', errorMessage);
         
-        // フォールバックUI表示
-        Utils.showFallbackUI(errorMessage);
+        // スネークバーでエラーを表示
+        const errorSnackbar = document.getElementById('errorSnackbar');
+        if (errorSnackbar) {
+            errorSnackbar.textContent = errorMessage;
+            errorSnackbar.classList.remove('hidden');
+            setTimeout(() => {
+                errorSnackbar.classList.add('hidden');
+            }, 5000);
+        }
         
-        // フォールバックUIが表示されなかった場合はアラート表示
-        const fallbackUI = document.getElementById('fallbackUI');
-        if (!fallbackUI || fallbackUI.classList.contains('hidden')) {
-            alert('アプリケーションの初期化中にエラーが発生しました: ' + errorMessage);
+        // YAML処理が必要なものだけフォールバックUIに切り替え
+        if (!app.yamlLibAvailable) {
+            // フォールバックUI表示
+            const fallbackUI = document.getElementById('fallbackUI');
+            const mainContent = document.getElementById('mainContent');
+            
+            if (fallbackUI) {
+                fallbackUI.classList.remove('hidden');
+                
+                // メインコンテンツを非表示
+                if (mainContent) {
+                    mainContent.style.display = 'none';
+                }
+                
+                console.log('フォールバックUIを表示しました');
+                
+                // フォールバックのボタンにイベントを追加
+                const fallbackReloadBtn = document.getElementById('fallbackReloadBtn');
+                if (fallbackReloadBtn) {
+                    fallbackReloadBtn.addEventListener('click', function() {
+                        window.location.reload();
+                    });
+                }
+            } else {
+                // フォールバックUIも表示できない場合はアラート表示
+                alert('アプリケーションの初期化中にエラーが発生しました: ' + errorMessage + '\nページを再読み込みしてください。');
+            }
         }
     }
     
     /**
      * アプリケーションを初期化
      */
-    async function initializeApp() {
+    function initializeApp() {
         try {
             // ブラウザの互換性チェック
             if (!checkBrowserCompatibility()) {
@@ -149,108 +160,65 @@
             setupErrorHandlers();
             
             // 必須リソースのチェック
-            if (!checkRequiredResources()) {
-                // YAMLライブラリが読み込まれていない場合は再度読み込みを試みる
-                if (!app.yamlLibAvailable) {
-                    try {
-                        await loadYamlLibrary();
-                    } catch (e) {
-                        throw new Error('YAMLライブラリの読み込みに失敗しました。ネットワーク接続を確認してください。');
-                    }
-                }
-            }
+            checkRequiredResources();
             
             // 保存された設定を適用
-            Utils.applyStoredPreferences();
+            if (typeof Utils !== 'undefined') {
+                Utils.applyStoredPreferences();
+            } else {
+                console.warn('Utilsが見つかりません。設定の適用をスキップします。');
+            }
             
             // UIコントローラーを初期化
-            if (!UIController.init()) {
-                throw new Error('UIコントローラーの初期化に失敗しました');
+            if (typeof UIController !== 'undefined') {
+                if (!UIController.init()) {
+                    console.warn('UIコントローラーの初期化に失敗しました');
+                }
+            } else {
+                console.warn('UIControllerが見つかりません');
             }
             
             // アプリケーションが正常に初期化されたことを記録
             app.initialized = true;
-            Utils.logDebug(`アプリケーションが正常に初期化されました (バージョン: ${CONFIG.VERSION})`);
+            console.log(`アプリケーションが初期化されました (バージョン: ${CONFIG ? CONFIG.VERSION : 'unknown'})`);
             
-            // URLパラメータを処理（将来の拡張用）
-            processUrlParameters();
+            // ローダーを非表示
+            const appLoader = document.getElementById('appLoader');
+            if (appLoader) {
+                setTimeout(() => {
+                    appLoader.style.opacity = '0';
+                    setTimeout(() => {
+                        appLoader.classList.add('hidden');
+                    }, 500);
+                }, 500);
+            }
+            
+            // エラーがあれば処理
+            if (app.errors.length > 0) {
+                handleInitializationErrors();
+            }
             
         } catch (error) {
             app.errors.push(error.message);
-            Utils.logError('アプリケーションの初期化中にエラーが発生しました:', error);
+            console.error('アプリケーションの初期化中にエラーが発生しました:', error);
             handleInitializationErrors();
-        }
-    }
-    
-    /**
-     * URLパラメータを処理（将来の拡張用）
-     */
-    function processUrlParameters() {
-        try {
-            const urlParams = new URLSearchParams(window.location.search);
-            
-            // デバッグモードパラメータ
-            if (urlParams.has('debug') && urlParams.get('debug') === 'true') {
-                CONFIG.DEBUG = true;
-                Utils.logDebug('デバッグモードが有効化されました');
-                
-                // デバッグパネルを表示
-                const debugPanel = document.getElementById('debugPanel');
-                if (debugPanel) {
-                    debugPanel.classList.remove('hidden');
-                }
-            }
-            
-            // 言語パラメータ
-            if (urlParams.has('lang')) {
-                const lang = urlParams.get('lang');
-                if (CONFIG.SUPPORTED_LANGUAGES.includes(lang)) {
-                    Utils.updateLanguage(lang);
-                    Utils.logDebug(`言語がパラメータから設定されました: ${lang}`);
-                }
-            }
-            
-            // テーマパラメータ
-            if (urlParams.has('theme')) {
-                const theme = urlParams.get('theme');
-                if (theme === 'dark' || theme === 'light') {
-                    Utils.setTheme(theme);
-                    Utils.logDebug(`テーマがパラメータから設定されました: ${theme}`);
-                }
-            }
-            
-            // サンプルYAMLを自動読み込み
-            if (urlParams.has('sample') && urlParams.get('sample') === 'true') {
-                const loadSampleBtn = document.getElementById('loadSampleBtn');
-                if (loadSampleBtn) {
-                    setTimeout(() => loadSampleBtn.click(), 500);
-                }
-            }
-            
-            // 親DataFieldテストを自動実行
-            if (urlParams.has('test-parent-datafield') && urlParams.get('test-parent-datafield') === 'true') {
-                const testDataFieldBtn = document.getElementById('testDataFieldBtn');
-                if (testDataFieldBtn) {
-                    setTimeout(() => testDataFieldBtn.click(), 500);
-                }
-            }
-            
-        } catch (e) {
-            Utils.logError('URLパラメータの処理中にエラーが発生しました:', e);
         }
     }
     
     // DOMContentLoaded時にアプリケーションを初期化
     document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM読み込み完了、アプリケーション初期化中...');
         // 非同期でアプリケーションを初期化
         setTimeout(initializeApp, 100);
     });
     
     // ページ完全読み込み時のフォールバック
     window.addEventListener('load', function() {
+        console.log('ページ完全読み込み完了');
+        
         // DOMContentLoadedで初期化されなかった場合のフォールバック
         if (!app.initialized) {
-            Utils.logWarn('DOMContentLoadedでの初期化に失敗したため、ページロード時に再試行します');
+            console.warn('DOMContentLoadedでの初期化に失敗したため、ページロード時に再試行します');
             initializeApp();
         }
         
@@ -258,7 +226,7 @@
         setTimeout(function() {
             const appLoader = document.getElementById('appLoader');
             if (appLoader && !appLoader.classList.contains('hidden')) {
-                Utils.logWarn('AppLoaderが長時間表示されたままのため、強制的に非表示にします');
+                console.warn('AppLoaderが長時間表示されたままのため、強制的に非表示にします');
                 appLoader.classList.add('hidden');
             }
         }, 5000);

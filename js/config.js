@@ -130,7 +130,7 @@ const CONFIG = {
     },
     
     // UIサポート言語
-    SUPPORTED_LANGUAGES: ['en', 'ja'],
+    SUPPORTED_LANGUAGES: ['en-us', 'ja-jp'],
     
     // エラースネークバー表示時間(ms)
     SNACKBAR_TIMEOUT: 5000,

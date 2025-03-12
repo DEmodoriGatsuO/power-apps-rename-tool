@@ -10,6 +10,43 @@ const YAMLProcessor = (function() {
     const updatedReferenceMap = {};
     
     /**
+     * 文字列が有効なPower FX式かどうかを確認
+     * @param {string} value 検証する値
+     * @returns {boolean} Power FX式かどうか
+     */
+    function isPowerFxExpression(value) {
+        if (typeof value !== 'string') return false;
+        return value.trim().startsWith('=');
+    }
+    
+    /**
+     * 値がPower FX式であることを確認し、必要ならば '=' を先頭に追加
+     * @param {string} value 検証する値
+     * @param {boolean} isExpression 式として扱うべきかどうか
+     * @returns {string} 正規化された値
+     */
+    function normalizePowerFxExpression(value, isExpression) {
+        if (typeof value !== 'string') return value;
+        
+        value = value.trim();
+        if (isExpression) {
+            // 式として扱うべき値が '=' で始まっていない場合、追加する
+            if (!value.startsWith('=')) {
+                return '=' + value;
+            }
+        } else {
+            // 式でない値が '=' で始まっている場合、必要に応じて文字列としてエスケープ
+            if (value.startsWith('=') && value !== '=true' && value !== '=false') {
+                // Power Apps では文字列として扱いたい場合は ="文字列" という形式にする
+                if (!value.startsWith('="') && !value.startsWith("='")) {
+                    return '="' + value.substring(1) + '"';
+                }
+            }
+        }
+        return value;
+    }
+
+    /**
      * 制御名を修正（親のDataFieldを参照）
      * @param {string} originalName 元の名前
      * @param {string} controlType コントロールタイプ
@@ -26,7 +63,7 @@ const YAMLProcessor = (function() {
         // データフィールドから名前を取得
         let fieldName = '';
         if (dataField) {
-            fieldName = Utils.getNameFromDataField(dataField);
+            fieldName = getNameFromDataField(dataField);
         }
 
         // コントロールタイプのプレフィックスを取得
@@ -38,7 +75,7 @@ const YAMLProcessor = (function() {
         // ===== ここが親DataField参照の重要な部分 =====
         // 親のTypedDataCardのデータフィールド情報を活用
         if (parentDataFieldInfo && parentDataFieldInfo.dataField) {
-            const parentFieldName = Utils.getNameFromDataField(parentDataFieldInfo.dataField);
+            const parentFieldName = getNameFromDataField(parentDataFieldInfo.dataField);
             Utils.logDebug('親のDataField検出:', parentFieldName, 'for', originalName);
             
             // 特定の子コントロール専用の命名規則
@@ -112,6 +149,21 @@ const YAMLProcessor = (function() {
     }
 
     /**
+     * データフィールド式から名前を抽出
+     * @param {string} dataField データフィールド式
+     * @returns {string} クリーンな名前
+     */
+    function getNameFromDataField(dataField) {
+        if (!dataField) return '';
+        
+        // "=", "'", and """ 文字を削除
+        let cleanField = dataField.replace(/[="']/g, '');
+        
+        // 先頭の空白を削除
+        return cleanField.trim();
+    }
+
+    /**
      * コントロールプロパティのエンハンス
      * @param {Object} properties プロパティオブジェクト
      * @param {string} controlType コントロールタイプ
@@ -121,6 +173,7 @@ const YAMLProcessor = (function() {
      * @returns {Object} 修正されたプロパティと変更リスト
      */
     function enhanceProperties(properties, controlType, parentType, dataFieldInfo = null, originalName = '') {
+        // 元のプロパティを変更せず、新しいオブジェクトにコピー
         const modifiedProperties = { ...properties };
         const changes = [];
         
@@ -142,8 +195,11 @@ const YAMLProcessor = (function() {
         const useDataSourceFix = enableDataSourceFix ? enableDataSourceFix.checked : false;
         const dataSourceVal = dataSourceName ? dataSourceName.value : 'Employee_Info';
 
-        // DisplayModeを設定
-        if (enableDisplayModeVal && !modifiedProperties.DisplayMode && controlType !== 'Form') {
+        // 既存のプロパティのみを修正するためのフラグ
+        const modifyExistingOnly = true;  // 将来的にUIで切り替え可能にする場合はここを変更
+
+        // DisplayModeを設定 (既存のプロパティのみ修正)
+        if (enableDisplayModeVal && modifiedProperties.hasOwnProperty('DisplayMode') && controlType !== 'Form') {
             if (controlType === 'Button' || controlType === 'ComboBox' || controlType === 'TextInput' || controlType === 'DatePicker') {
                 modifiedProperties.DisplayMode = '=If(frmMain.Mode=FormMode.View, DisplayMode.Disabled, DisplayMode.Edit)';
                 changes.push('DisplayMode');
@@ -153,20 +209,21 @@ const YAMLProcessor = (function() {
             }
         }
 
-        // ContentLanguageを設定
-        if (enableContentLanguageVal && !modifiedProperties.ContentLanguage) {
+        // ContentLanguageを設定 (既存のプロパティのみ修正)
+        if (enableContentLanguageVal && modifiedProperties.hasOwnProperty('ContentLanguage')) {
             if (controlType === 'Text' || controlType === 'TextInput') {
                 modifiedProperties.ContentLanguage = `="${contentLanguageVal}"`;
                 changes.push('ContentLanguage');
             }
         }
 
-        // Parent.DisplayName参照を設定
+        // Parent.DisplayName参照を設定 (既存のプロパティのみ修正)
         if (enableParentDisplayVal && parentType && parentType.includes('TypedDataCard')) {
-            if (controlType === 'Text' && !modifiedProperties.Text) {
+            if (controlType === 'Text' && modifiedProperties.hasOwnProperty('Text')) {
                 modifiedProperties.Text = '=Parent.DisplayName';
                 changes.push('Text (Parent.DisplayName)');
-            } else if ((controlType === 'TextInput' || controlType === 'DatePicker' || controlType === 'ComboBox') && !modifiedProperties.AccessibleLabel) {
+            } else if ((controlType === 'TextInput' || controlType === 'DatePicker' || controlType === 'ComboBox') && 
+                        modifiedProperties.hasOwnProperty('AccessibleLabel')) {
                 modifiedProperties.AccessibleLabel = '=Parent.DisplayName';
                 changes.push('AccessibleLabel');
             }
@@ -188,114 +245,40 @@ const YAMLProcessor = (function() {
             }
         }
         
-        // dataFieldInfoを使用したカードコントロールの強化
-        if (useCardEnhancements && dataFieldInfo && dataFieldInfo.dataField) {
-            const fieldName = Utils.getNameFromDataField(dataFieldInfo.dataField);
+        // カードコントロール強化 (既存のプロパティのみを修正)
+        if (useCardEnhancements && !modifyExistingOnly && dataFieldInfo && dataFieldInfo.dataField) {
+            const fieldName = getNameFromDataField(dataFieldInfo.dataField);
             
             // TypedDataCardコントロールの場合、データカード専用のプロパティを強化
             if (controlType === 'TypedDataCard') {
-                // DisplayNameが存在しない場合は適切に設定
-                if (!modifiedProperties.DisplayName) {
+                // DisplayNameが存在する場合のみ修正
+                if (modifiedProperties.hasOwnProperty('DisplayName')) {
                     modifiedProperties.DisplayName = `=DataSourceInfo([@${dataSourceVal || 'Employee_Info'}],DataSourceInfo.DisplayName,'${fieldName}')`;
                     changes.push('DisplayName');
                 }
                 
-                // フィールド名に基づいてツールチップを設定
-                if (!modifiedProperties.Tooltip) {
-                    modifiedProperties.Tooltip = `="Enter ${fieldName} information"`;
-                    changes.push('Tooltip');
-                }
-                
-                // 必須フィールドの場合は情報アイコンを表示
-                if (!modifiedProperties.ShowInfo && dataFieldInfo.required) {
-                    modifiedProperties.ShowInfo = true;
-                    changes.push('ShowInfo');
-                }
+                // プロパティの追加は行わない（既存のプロパティだけを修正）
             }
             
             // TypedDataCard内のコントロール
             if (parentType && parentType.includes('TypedDataCard')) {
-                // TextInput特有の強化
-                if (controlType === 'TextInput') {
-                    // ヒントテキストを設定
-                    if (!modifiedProperties.HintText) {
-                        modifiedProperties.HintText = `="Enter ${fieldName} here..."`;
+                // 既存のプロパティのみを修正
+                for (const prop in modifiedProperties) {
+                    if (prop === 'HintText' && controlType === 'TextInput') {
+                        modifiedProperties[prop] = `="Enter ${fieldName} here..."`;
                         changes.push('HintText');
-                    }
-                    
-                    // 検証モードとメッセージを設定
-                    if (dataFieldInfo.required && !modifiedProperties.Reset) {
-                        modifiedProperties.Reset = '=true';
-                        changes.push('Reset');
-                        
-                        if (!modifiedProperties.OnReset) {
-                            modifiedProperties.OnReset = `=If(Self.Value = "", Notify("Please enter a value for ${fieldName}", NotificationType.Error))`;
-                            changes.push('OnReset');
-                        }
-                    }
-                    
-                    // 検証に基づいてボーダーカラーを追加
-                    if (!modifiedProperties.BorderColor) {
-                        modifiedProperties.BorderColor = '=If(Parent.Error, RGBA(209, 49, 53, 1), RGBA(0, 18, 107, 1))';
-                        changes.push('BorderColor');
-                    }
-                }
-                
-                // ComboBox特有の強化
-                if (controlType === 'ComboBox') {
-                    // プレースホルダーテキストを設定
-                    if (!modifiedProperties.PlaceholderText) {
-                        modifiedProperties.PlaceholderText = `="Select ${fieldName}..."`;
+                    } else if (prop === 'PlaceholderText' && controlType === 'ComboBox') {
+                        modifiedProperties[prop] = `="Select ${fieldName}..."`;
                         changes.push('PlaceholderText');
-                    }
-                    
-                    // 検索ヒントテキストを設定
-                    if (!modifiedProperties.SearchHintText) {
-                        modifiedProperties.SearchHintText = `="Search ${fieldName}..."`;
+                    } else if (prop === 'SearchHintText' && controlType === 'ComboBox') {
+                        modifiedProperties[prop] = `="Search ${fieldName}..."`;
                         changes.push('SearchHintText');
-                    }
-                }
-                
-                // DatePicker特有の強化
-                if (controlType === 'DatePicker') {
-                    // デフォルトの日付フォーマット
-                    if (!modifiedProperties.DateTimeFormat) {
-                        modifiedProperties.DateTimeFormat = '=DateTimeFormat.ShortDate';
+                    } else if (prop === 'DateTimeFormat' && controlType === 'DatePicker') {
+                        modifiedProperties[prop] = '=DateTimeFormat.ShortDate';
                         changes.push('DateTimeFormat');
-                    }
-                    
-                    // フォーマット文字列を設定
-                    if (!modifiedProperties.Format) {
-                        modifiedProperties.Format = '=DateTimeFormat.ShortDate';
+                    } else if (prop === 'Format' && controlType === 'DatePicker') {
+                        modifiedProperties[prop] = '=DateTimeFormat.ShortDate';
                         changes.push('Format');
-                    }
-                }
-                
-                // バリデーションエラー用のText（Label）強化
-                if (controlType === 'Text' && originalName.toLowerCase().includes('errormessage')) {
-                    // エラーテキストスタイル
-                    if (!modifiedProperties.Color) {
-                        modifiedProperties.Color = '=RGBA(209, 49, 53, 1)';
-                        changes.push('Color');
-                    }
-                    
-                    if (!modifiedProperties.FontWeight) {
-                        modifiedProperties.FontWeight = '=FontWeight.Semibold';
-                        changes.push('FontWeight');
-                    }
-                }
-                
-                // 必須インディケーターのスタイリング
-                if (controlType === 'Text' && originalName.toLowerCase().includes('starvisible')) {
-                    // 必須星印スタイル
-                    if (!modifiedProperties.Color) {
-                        modifiedProperties.Color = '=RGBA(209, 49, 53, 1)';
-                        changes.push('Color');
-                    }
-                    
-                    if (!modifiedProperties.Visible && dataFieldInfo.required) {
-                        modifiedProperties.Visible = '=true';
-                        changes.push('Visible');
                     }
                 }
             }
@@ -452,7 +435,7 @@ const YAMLProcessor = (function() {
                             type: controlType,
                             propertyChanges: propertyChanges.join(', '),
                             parentDataField: dataFieldInfo && dataFieldInfo.dataField 
-                                ? Utils.getNameFromDataField(dataFieldInfo.dataField) 
+                                ? getNameFromDataField(dataFieldInfo.dataField) 
                                 : ''
                         });
                     }
@@ -513,6 +496,144 @@ const YAMLProcessor = (function() {
     }
 
     /**
+     * Power FX式内のシングルクオーテーションを正しく処理する
+     * @param {string} yamlString YAML文字列
+     * @returns {string} 修正されたYAML文字列
+     */
+    function fixPowerFxQuotes(yamlString) {
+        if (typeof yamlString !== 'string') return yamlString;
+
+        // 行単位で処理
+        const lines = yamlString.split('\n');
+        const fixedLines = [];
+
+        for (let i = 0; i < lines.length; i++) {
+            let line = lines[i];
+            
+            // Power FX式を含む行を検出（=で始まるプロパティ値）
+            if (line.match(/:\s*(['"]?)=(.*?)(\1)$/)) {
+                // 最初に、Power FX式の引用符を削除（例: '=expr' → =expr）
+                line = line.replace(/:\s*(['"]?)=(.*?)\1$/, ': =$2');
+                
+                // 次に、式内の特殊な引用符パターンを処理
+                // 例: ='TextCanvas.Weight'.Semibold や =DataSourceInfo(...,'Name')
+                
+                // パターン1: 'Namespace.Member' アクセス
+                // 例: ='TextCanvas.Weight'.Semibold
+                if (line.includes("='") && line.includes("'.")) {
+                    // 引用符が既に適切な形式になっているので、そのまま維持
+                }
+                
+                // パターン2: 関数呼び出し内の文字列パラメータ
+                // 例: =DataSourceInfo([@Employee_Info],DataSourceInfo.DisplayName,'Name')
+                else if (line.includes("='") || line.includes("',")) {
+                    // 引用符が既に適切な形式になっているので、そのまま維持
+                }
+                
+                // その他のPower FX式
+                else {
+                    // 必要に応じて他のパターンも処理
+                }
+                
+                fixedLines.push(line);
+            } else {
+                // Power FX式でない行はそのまま維持
+                fixedLines.push(line);
+            }
+        }
+
+        return fixedLines.join('\n');
+    }
+
+    /**
+     * YAMLのダンプオプションをカスタマイズ
+     */
+    function customYamlDump(obj) {
+        try {
+            // jsyaml.dumpのカスタムオプション
+            const options = {
+                indent: 2,
+                lineWidth: -1,
+                noRefs: true,
+                noCompatMode: true,
+                condenseFlow: false,
+                flowLevel: -1,
+                styles: {},
+                schema: jsyaml.DEFAULT_FULL_SCHEMA
+            };
+            
+            // YAMLを文字列に変換（元のオブジェクトをクローン）
+            const objCopy = JSON.parse(JSON.stringify(obj));
+            
+            // Power FX式を事前に処理（シングルクオーテーションを保護）
+            preprocessPowerFxExpressions(objCopy);
+            
+            // 処理済みオブジェクトをYAMLにダンプ
+            let yamlStr = jsyaml.dump(objCopy, options);
+            
+            // 通常の修正処理
+            yamlStr = yamlStr.replace(/'(=.*?)'/g, '$1');
+            yamlStr = yamlStr.replace(/'(true|false)'/g, '$1');
+            
+            // YAMLの構造を保持しながら、Power FX式の周りの不要な引用符を削除
+            const lines = yamlStr.split('\n');
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                
+                // '=' で始まる値から引用符を削除
+                if (line.includes(': \'=')) {
+                    lines[i] = line.replace(/: '(=.*?)'$/, ': $1');
+                    
+                    // __QUOTE__ プレースホルダーを元のシングルクォーテーションに戻す
+                    lines[i] = lines[i].replace(/__QUOTE__/g, "'");
+                }
+            }
+            
+            // 最終的な修正（残りのプレースホルダーを置換）
+            yamlStr = lines.join('\n').replace(/__QUOTE__/g, "'");
+            
+            // Power FX式内のシングルクォーテーションを修正
+            yamlStr = fixPowerFxQuotes(yamlStr);
+            
+            return yamlStr;
+        } catch (error) {
+            console.error('YAML変換中にエラーが発生しました:', error);
+            // エラーが発生した場合は元のYAMLダンプを使用
+            return jsyaml.dump(obj);
+        }
+    }
+
+    /**
+     * オブジェクト内のPower FX式をダンプ前に事前処理する
+     * @param {Object} obj 処理するオブジェクト
+     */
+    function preprocessPowerFxExpressions(obj) {
+        if (typeof obj !== 'object' || obj === null) return;
+        
+        if (Array.isArray(obj)) {
+            // 配列の各要素を処理
+            for (let i = 0; i < obj.length; i++) {
+                if (typeof obj[i] === 'string' && obj[i].startsWith('=')) {
+                    // Power FX式内のシングルクォーテーションを一時的にエスケープ
+                    obj[i] = obj[i].replace(/'/g, '__QUOTE__');
+                } else if (typeof obj[i] === 'object' && obj[i] !== null) {
+                    preprocessPowerFxExpressions(obj[i]);
+                }
+            }
+        } else {
+            // オブジェクトの各プロパティを処理
+            for (const key in obj) {
+                if (typeof obj[key] === 'string' && obj[key].startsWith('=')) {
+                    // Power FX式内のシングルクォーテーションを一時的にエスケープ
+                    obj[key] = obj[key].replace(/'/g, '__QUOTE__');
+                } else if (typeof obj[key] === 'object' && obj[key] !== null) {
+                    preprocessPowerFxExpressions(obj[key]);
+                }
+            }
+        }
+    }
+
+    /**
      * YAMLを処理して制御名とプロパティを修正
      */
     function processYaml(yamlStr) {
@@ -547,9 +668,12 @@ const YAMLProcessor = (function() {
                 finalObj = updatePropertyReferences(processedObj);
             }
             
+            // カスタムYAMLダンプを使用して出力
+            const outputYaml = customYamlDump(finalObj);
+            
             // 変換済みYAMLを返す
             return {
-                yaml: jsyaml.dump(finalObj),
+                yaml: outputYaml,
                 changeLog: changeLog,
                 nameMapping: nameMapping,
                 updatedReferenceMap: updatedReferenceMap
@@ -569,6 +693,10 @@ const YAMLProcessor = (function() {
             fixControlName: fixControlName,
             enhanceProperties: enhanceProperties,
             updateReferences: updateReferences,
+            isPowerFxExpression: isPowerFxExpression,
+            normalizePowerFxExpression: normalizePowerFxExpression,
+            getNameFromDataField: getNameFromDataField,
+            fixPowerFxQuotes: fixPowerFxQuotes,
             generatedNames: generatedNames,
             nameMapping: nameMapping,
             updatedReferenceMap: updatedReferenceMap
