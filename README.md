@@ -75,7 +75,11 @@ Custom mappings are saved in your browser's local storage for future use.
 
 ### Method 1: GitHub Pages
 
+<<<<<<< HEAD
 Access the tool directly at [Power Apps Control Converter](https://yourusername.github.io/powerapps-control-converter/)
+=======
+Access the tool directly at [Tool](https://demodorigatsuo.github.io/power-apps-rename-tool/)
+>>>>>>> f03f6d7e993648a22f0a7d1d400f0694fb44070e
 
 ### Method 2: Local Installation
 
@@ -112,4 +116,126 @@ MIT
 
 ## Disclaimer
 
+<<<<<<< HEAD
 This tool is created to assist Power Apps developers in converting classic controls to modern controls. While it covers many control types and properties, it may not support all possible scenarios. Always review the converted output before using it in your production applications.
+=======
+- Naming conventions based on [Microsoft's Official Documentation](https://learn.microsoft.com/en-us/power-apps/guidance/coding-guidelines/code-readability)
+- Developed by Claude AI (Anthropic) - 2025
+
+---
+
+# Power Apps コントロール命名ツール
+
+![バージョン](https://img.shields.io/badge/version-1.2.0-blue)
+![ライセンス](https://img.shields.io/badge/license-MIT-green)
+
+[English](#power-apps-control-naming-tool) | **日本語**
+
+## 概要
+
+Power Apps コントロール命名ツールは、Microsoft Power Appsのベストプラクティスに従ってコントロールの命名を自動的に修正し、プロパティを強化するWebアプリケーションです。このツールにより、アプリのネーミング規則とプロパティの一貫性が確保され、開発プロセスが効率化されます。
+
+### 🌟 Claude AIにより開発
+
+このツールはAnthropicのClaude AIによって設計・開発されました。一般的なPower Apps開発の課題を解決するために作られており、AIが実用的な専門開発者ツールを作成できることを示しています。
+
+## 主な機能
+
+- **コントロール名の自動修正**: Power Appsのベストプラクティスに従った命名規則に修正
+- **親DataField参照**: 親カードのDataField値を使用して子コントロールの名前を一貫性を持って命名
+- **プロパティの自動強化**: DisplayMode、ContentLanguage、その他のプロパティを自動設定
+- **参照の自動更新**: コントロール名変更時にすべての参照を自動的に更新
+- **多言語対応**: 英語と日本語のインターフェースをサポート
+- **ダークモード**: 目に優しいダークモードを搭載
+
+## 🔍 親DataField参照機能
+
+このツールの特徴的な機能は、親カードのDataField値を子コントロールの命名に活用する機能です。これにより、論理的な命名構造が作成され、コードの可読性が大幅に向上します。
+
+例えば、DataCardのDataFieldが`"Name"`の場合：
+- `DataCardKey1` → `lblNameKey`
+- `DataCardValue1` → `txtName`
+- `ErrorMessage1` → `lblNameError`
+
+この命名規則により、コントロール間の関係とその目的が非常に分かりやすくなります。
+
+## 使い方
+
+1. **YAMLコードを入力**: Power AppsからエクスポートしたYAMLコードを貼り付けます
+2. **設定を調整**: 必要に応じて命名とプロパティの設定を構成します
+3. **「コントロール名とプロパティを修正する」をクリック**: ツールがYAMLを処理します
+4. **変更を確認**: 変更ログで何が修正されたかを確認します
+5. **修正コードをコピー**: 「コピー」ボタンを使用して改善されたコードを取得します
+
+「親DataFieldテスト」ボタンをクリックすると、親DataField参照のサンプルYAMLを読み込むこともできます。
+
+### コントロールタイプのプレフィックス
+
+このツールは以下の標準的な3文字のプレフィックスを使用します：
+
+| コントロールタイプ | プレフィックス | 例 |
+|--------------|--------|---------|
+| ラベル | lbl | lblUserName |
+| テキスト入力 | txt | txtEmail |
+| ボタン | btn | btnSubmit |
+| ギャラリー | gal | galProducts |
+| フォーム | frm | frmMain |
+| コンボボックス | cmb | cmbCategory |
+| チェックボックス | chk | chkAccept |
+| 日付選択 | dte | dteStart |
+| コンテナ | con | conHeader |
+
+## インストール方法
+
+### 方法1: GitHub Pages
+
+以下のURLからツールに直接アクセスできます：[Tool](https://demodorigatsuo.github.io/power-apps-rename-tool/)
+
+### 方法2: ローカルインストール
+
+1. リポジトリをクローンします：
+   ```bash
+   git clone https://github.com/yourusername/powerapps-control-naming-tool.git
+   ```
+
+2. プロジェクトフォルダに移動します：
+   ```bash
+   cd powerapps-control-naming-tool
+   ```
+
+3. ローカルサーバーを起動します：
+   - Pythonを使用する場合：
+     ```bash
+     python -m http.server 8000
+     ```
+   - Node.jsを使用する場合：
+     ```bash
+     npx http-server
+     ```
+
+4. ブラウザを開き、以下にアクセスします：
+   - http://localhost:8000 (Python) または
+   - http://localhost:8080 (Node.js)
+
+## 技術詳細
+
+- HTML5、CSS3、JavaScript（ES6+）で構築
+- スタイリングにTailwind CSSを使用
+- YAML処理にjs-yamlライブラリを使用
+- サーバーサイドコンポーネントは不要 - ブラウザ内ですべて実行
+- Power Apps互換のYAML形式を維持
+
+## 互換性
+
+- **ブラウザ**: Chrome（推奨）、Firefox、Edge、Safari
+- **Power Apps**: Power Apps YAML形式と互換性あり
+
+## ライセンス
+
+このプロジェクトはMITライセンスのもとで公開されています - 詳細はLICENSEファイルを参照してください。
+
+## 謝辞
+
+- 命名規則は[Microsoft公式ドキュメント](https://learn.microsoft.com/ja-jp/power-apps/guidance/coding-guidelines/code-readability)に基づいています
+- Claude AI（Anthropic）により開発 - 2025年
+>>>>>>> f03f6d7e993648a22f0a7d1d400f0694fb44070e
