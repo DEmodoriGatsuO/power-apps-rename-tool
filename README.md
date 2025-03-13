@@ -75,11 +75,7 @@ Custom mappings are saved in your browser's local storage for future use.
 
 ### Method 1: GitHub Pages
 
-<<<<<<< HEAD
-Access the tool directly at [Power Apps Control Converter](https://yourusername.github.io/powerapps-control-converter/)
-=======
 Access the tool directly at [Tool](https://demodorigatsuo.github.io/power-apps-rename-tool/)
->>>>>>> f03f6d7e993648a22f0a7d1d400f0694fb44070e
 
 ### Method 2: Local Installation
 
@@ -116,8 +112,6 @@ MIT
 
 ## Disclaimer
 
-<<<<<<< HEAD
-This tool is created to assist Power Apps developers in converting classic controls to modern controls. While it covers many control types and properties, it may not support all possible scenarios. Always review the converted output before using it in your production applications.
 =======
 - Naming conventions based on [Microsoft's Official Documentation](https://learn.microsoft.com/en-us/power-apps/guidance/coding-guidelines/code-readability)
 - Developed by Claude AI (Anthropic) - 2025
@@ -238,4 +232,3 @@ Power Apps コントロール命名ツールは、Microsoft Power Appsのベス�
 
 - 命名規則は[Microsoft公式ドキュメント](https://learn.microsoft.com/ja-jp/power-apps/guidance/coding-guidelines/code-readability)に基づいています
 - Claude AI（Anthropic）により開発 - 2025年
->>>>>>> f03f6d7e993648a22f0a7d1d400f0694fb44070e
