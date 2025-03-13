@@ -152,17 +152,36 @@ const UIController = (function() {
     /**
      * 言語選択変更イベントハンドラー
      */
+    // js/ui-controller.js の handleLanguageChange 関数を修正
     function handleLanguageChange() {
         if (elements.languageSelect) {
-            Utils.updateLanguage(elements.languageSelect.value);
+            const selectedLang = elements.languageSelect.value;
+            console.log('言語を切り替えます:', selectedLang); // デバッグログを追加
+            Utils.updateLanguage(selectedLang);
         }
+    }
+
+    // 言語選択要素に確実にイベントリスナーを追加
+    if (elements.languageSelect) {
+        elements.languageSelect.addEventListener('change', handleLanguageChange);
+        console.log('言語選択イベントリスナーを設定しました');
     }
     
     /**
      * テーマ切り替えボタンのクリックイベントハンドラー
      */
+    // js/ui-controller.js の handleThemeToggleClick 関数を修正
     function handleThemeToggleClick() {
-        Utils.toggleTheme();
+        console.log('テーマ切り替えボタンがクリックされました');
+        const isDarkMode = document.documentElement.classList.contains('dark');
+        console.log('現在のモード:', isDarkMode ? 'ダーク' : 'ライト');
+        Utils.setTheme(isDarkMode ? 'light' : 'dark');
+    }
+
+    // テーマトグルボタンに確実にイベントリスナーを追加
+    if (elements.themeToggle) {
+        elements.themeToggle.addEventListener('click', handleThemeToggleClick);
+        console.log('テーマトグルイベントリスナーを設定しました');
     }
     
     /**

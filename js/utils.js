@@ -228,23 +228,38 @@ const Utils = {
      * テーマを設定
      * @param {string} theme テーマ名 ('light' または 'dark')
      */
+    // js/utils.js の setTheme 関数を修正
     setTheme: function(theme) {
+        console.log('テーマを設定します:', theme);
+        
         if (theme === 'dark') {
             document.documentElement.classList.add('dark');
-            const lightIcon = document.getElementById('lightIcon');
-            const darkIcon = document.getElementById('darkIcon');
-            if (lightIcon) lightIcon.classList.add('hidden');
-            if (darkIcon) darkIcon.classList.remove('hidden');
+            document.documentElement.setAttribute('data-theme', 'dark');
         } else {
             document.documentElement.classList.remove('dark');
-            const lightIcon = document.getElementById('lightIcon');
-            const darkIcon = document.getElementById('darkIcon');
-            if (lightIcon) lightIcon.classList.remove('hidden');
-            if (darkIcon) darkIcon.classList.add('hidden');
+            document.documentElement.setAttribute('data-theme', 'light');
+        }
+        
+        // アイコン表示を切り替え
+        const lightIcon = document.getElementById('lightIcon');
+        const darkIcon = document.getElementById('darkIcon');
+        
+        if (lightIcon && darkIcon) {
+            if (theme === 'dark') {
+                lightIcon.classList.add('hidden');
+                darkIcon.classList.remove('hidden');
+            } else {
+                lightIcon.classList.remove('hidden');
+                darkIcon.classList.add('hidden');
+            }
+            console.log('アイコン表示を更新しました:', theme);
+        } else {
+            console.warn('テーマアイコンが見つかりません');
         }
         
         // ローカルストレージに保存
         this.saveToStorage(CONFIG.STORAGE_KEYS.THEME, theme);
+        console.log('テーマ設定完了:', theme);
     },
     
     /**
@@ -274,18 +289,24 @@ const Utils = {
      * @param {string} lang 言語コード
      */
     updateLanguage: function(lang) {
-        if (!CONFIG.SUPPORTED_LANGUAGES.includes(lang)) {
-            lang = CONFIG.DEFAULT_LANGUAGE;
+        console.log('言語更新処理を開始:', lang);
+        
+        // サポートされている言語かチェック
+        if (!['en', 'ja'].includes(lang)) {
+            console.warn('未サポートの言語:', lang);
+            lang = 'en'; // デフォルトは英語
         }
         
-        // すべての言語要素を非表示
+        // すべての言語要素をいったん非表示
         document.querySelectorAll('[data-lang]').forEach(el => {
             el.classList.add('hidden');
+            console.log('要素を非表示:', el.tagName, el.getAttribute('data-lang'));
         });
         
         // 選択された言語の要素のみ表示
         document.querySelectorAll(`[data-lang="${lang}"]`).forEach(el => {
             el.classList.remove('hidden');
+            console.log('要素を表示:', el.tagName, el.getAttribute('data-lang'));
         });
         
         // プレースホルダーテキストを更新
@@ -303,6 +324,8 @@ const Utils = {
         
         // ローカルストレージに保存
         this.saveToStorage(CONFIG.STORAGE_KEYS.LANGUAGE, lang);
+        
+        console.log('言語更新完了:', lang);
     },
     
     /**
